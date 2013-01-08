@@ -1,0 +1,187 @@
+<?php 
+
+function facebookAppRequest(){
+        $app_id = "YOUR_APP_ID";
+        $app_secret = "YOUR_APP_SECRET";
+        $my_url = base_url()."REDIRECT_METHOD";// eg. login/auth
+        $code = $this->input->get('code'); // will be used to fetch any &code in the url
+        
+
+     if(empty($code)) {
+         if(!isset($_COOKIE['state'])){
+             $state = md5(uniqid(rand(), TRUE));
+             $array_state = array(
+                 'name' => 'state',
+                 'value' => $state,
+                 'expire' => '86500',
+                 'secure' => FALSE
+                 );
+             $this->input->set_cookie($array_state);
+             }else{
+             $state = $_COOKIE['state'];
+             }
+             $dialog_url = "https://www.facebook.com/dialog/oauth?client_id=" 
+             . $app_id . "&redirect_uri=" . urlencode($my_url) . "&state="
+                     . $state. "&scope=user_birthday,sms";
+             echo("<script> top.location.href='" . $dialog_url . "'</script>");
+             // set here the permission you would like to access.
+             }else{
+                 if(!isset($_COOKIE['access_token_facebook'])){
+                     if($_COOKIE['state'] && ($_COOKIE['state'] === $this->input->get('state'))) {
+                         $token_url = "https://graph.facebook.com/oauth/access_token?"
+                         . "client_id=" . $app_id . "&redirect_uri=" . urlencode($my_url)
+                                 . "&client_secret=" . $app_secret . "&code=" . $code;
+                         
+                         $response = $this->get_data($token_url);
+                         $params = null;
+                         parse_str($response, $params);
+                         $array_token = array(
+                             'name' => 'access_token_facebook',
+                             'value' => $params['access_token'],
+                             'expire' => $params['expires'],
+                             'secure' => FALSE
+                             );
+                         $this->input->set_cookie($array_token);
+                         $access_token  = $token_detail->access_token;
+                         
+                         }else {
+                             echo("The state does not match. You may be a victim of CSRF(<a href='http://www.google.com/url?sa=t&rct=j&q=csrf&source=web&cd=1&ved=0CDAQFjAA&url=http%3A%2F%2Fen.wikipedia.org%2Fwiki%2FCross-site_request_forgery&ei=FRTgUIT8F6ad0AX1pIHIDw&usg=AFQjCNHTv-BNCKp3W0AVfOZ4jWQLWbdhgA&bvm=bv.1355534169,d.d2k'>Cross-site request forgery</a>).");
+                             
+                         }
+                             
+                             }else{
+                         $access_token = $_COOKIE['access_token_facebook'];
+                             }
+                         $graph_url = "https://graph.facebook.com/me?access_token=".$access_token;   
+                         $user = json_decode($this->get_data($graph_url));    
+                         $this->verify($user->id);
+                             
+                             }
+                             
+                             }
+                             
+                             
+                             
+                             
+                                
+                             
+    function googleAppRequest(){
+        $client_id = "YOUR_CLIENT_ID";
+        $client_secret = "YOUR_CLIENT_SECRET";
+        $my_url = base_url()."REDIRECT_METHOD";// eg. login/auth
+        $scope = "https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fuserinfo";
+        $code = $this->input->get('code');
+        
+
+     if(empty($code)) {
+         if(!isset($_COOKIE['state'])){
+             $state = md5(uniqid(rand(), TRUE));
+             $array_state = array(
+                 'name' => 'state',
+                 'value' => $state,
+                 'expire' => '86500',
+                 'secure' => FALSE
+                 );
+             $this->input->set_cookie($array_state);
+             }else{
+             $state = $_COOKIE['state'];
+             }
+             $dialog_url = "https://accounts.google.com/o/oauth2/auth?response_type=code&client_id=". $client_id .
+                     "&redirect_uri=" . urlencode($my_url) .
+                     "&state=".$state.
+                     "&scope=".$scope.".email+".$scope.".profile"
+                     ;
+               //set here the permissions you are interested in.
+             
+             echo("<script> top.location.href='" . $dialog_url . "'</script>");
+             
+             }else{
+                
+                 if(!isset($_COOKIE['access_token_google'])){
+                     if($_COOKIE['state'] && ($_COOKIE['state'] === $this->input->get('state'))) {
+                         
+                         $token_url = "https://accounts.google.com/o/oauth2/token";
+                       $param = array(
+                       "grant_type" => "authorization_code", 
+                       "code" => $code, 
+                       "client_id" => $client_id, 
+                       "client_secret" => $client_secret, 
+                       "redirect_uri" => $my_url
+                       );
+                         $response = $this->get_data_google($token_url,$param);
+                         $token_detail = json_decode($response);
+                       
+                         $array_token = array(
+                             'name' => 'access_token_google',
+                             'value' => $token_detail->access_token,
+                             'expire' => $token_detail->expires_in,
+                             'secure' => FALSE
+                             );
+                         $this->input->set_cookie($array_token);
+                         $access_token  = $token_detail->access_token;
+                         
+                         }else {
+                             echo("The state does not match. You may be a victim of CSRF(<a href='http://www.google.com/url?sa=t&rct=j&q=csrf&source=web&cd=1&ved=0CDAQFjAA&url=http%3A%2F%2Fen.wikipedia.org%2Fwiki%2FCross-site_request_forgery&ei=FRTgUIT8F6ad0AX1pIHIDw&usg=AFQjCNHTv-BNCKp3W0AVfOZ4jWQLWbdhgA&bvm=bv.1355534169,d.d2k'>Cross-site request forgery</a>).");
+                             
+                         }
+                             
+                             }else{
+                         $access_token = $_COOKIE['access_token_google'];
+                             }
+                             
+                         $graph_url = "https://www.googleapis.com/oauth2/v1/userinfo?access_token=".$access_token;
+                         $user = json_decode($this->get_data($graph_url));
+                         $this->get_userdata($user->id, "gmail", $user->given_name, $user->family_name,"", "", $user->gender, $user->picture, "");
+                             
+                             
+                             }
+                             
+                             }
+                             
+                              
+     function get_data_google($url,$param) {
+       $postText = http_build_query($param);
+
+       $ch = curl_init();
+       curl_setopt($ch, CURLOPT_URL, $url);
+       curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+       curl_setopt($ch, CURLOPT_POST, true);
+       curl_setopt($ch, CURLOPT_POSTFIELDS, $postText); 
+       curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+       curl_setopt($ch, CURLOPT_SSL_VERIFYHOST, false);
+
+       $result = curl_exec($ch);
+       return $result;
+      }
+      
+      function get_data($url) {
+        $ch = curl_init();
+        $timeout = 5;
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+        curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, $timeout);
+        $data = curl_exec($ch);
+        curl_close($ch);
+        return $data;
+      }
+
+
+     function get_userdata($id,$type,$first_name,$last_name,$birthday,$quotes,$gender,$picture,$concentration,$email,$facebook_id){
+     
+       $data['id'] = $id;
+       $data['login_type'] = $type;
+       $data['first_name']  = $first_name;
+       $data['last_name'] =  $last_name;
+       $data['birthday']   = $birthday;
+       $data['quotes']   = $quotes;
+       $data['gender'] = $gender;
+       $data['picture'] = $picture;
+       $data['concentration'] = $concentration;
+       $data['email'] = $email;
+       
+       $this->load->view('get_userdetails',$data);
+     }                         
+                             
+   
+                             
+    
